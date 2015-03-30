@@ -1,0 +1,10 @@
+{
+  "ImportPath": "github.com/arduino/go-xero",
+  "GoVersion": "go1.4",
+  "Deps": [
+    {
+      "ImportPath": "github.com/garyburd/go-oauth/oauth",
+      "Rev": "fa02955a8929c2f007c533fbdfb8ddc91bb6a731"
+    }
+  ]
+}
