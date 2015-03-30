@@ -51,7 +51,7 @@ func NewClient(token string, key []byte) error {
 
 	client = oauth.Client{
 		TemporaryCredentialRequestURI: requestTokenURL,
-		ResourceOwnerAuthorizationURI: authorizeTokenURL, //"https://appcenter.intuit.com/Connect/Begin",
+		ResourceOwnerAuthorizationURI: authorizeTokenURL,
 		TokenRequestURI:               accessTokenURL,
 		Header:                        http.Header{"Accept": {"application/xml"}},
 		SignatureMethod:               oauth.RSASHA1,
