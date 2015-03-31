@@ -73,7 +73,7 @@ func PostRequest(path string, payload string) (response string, err error) {
 		return "", reqErr
 	}
 
-	req.URL.Opaque = path
+	req.URL.Path = path
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, "POST", req.URL, nil)
 	if headerErr != nil {
@@ -82,7 +82,7 @@ func PostRequest(path string, payload string) (response string, err error) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
-	resp, reqErr := client.Post(http.DefaultClient, &client.Credentials, "https://api.xero.com/api.xro/2.0/invoices", form)
+	resp, reqErr := client.Post(http.DefaultClient, &client.Credentials, req.URL.String(), form)
 	if reqErr != nil {
 		log.Printf("[xero PostRequest] - Error: %v\n", reqErr)
 		return "", reqErr
@@ -105,7 +105,7 @@ func Request(method string, path string) (response string, err error) {
 	}
 
 	req.URL.Opaque = path
-
+	log.Printf("[xero Request] - URL: %s\n", req.URL.String())
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
