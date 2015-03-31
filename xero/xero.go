@@ -105,7 +105,7 @@ func Request(method string, path string) (response string, err error) {
 	}
 
 	req.URL.Opaque = path
-	log.Printf("[xero Request] - URL: %s\n", req.URL.String())
+
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
