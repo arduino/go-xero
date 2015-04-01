@@ -18,7 +18,9 @@
 package invoice
 
 import (
+	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"log"
 
 	"github.com/arduino/go-xero/xero"
@@ -28,64 +30,131 @@ const (
 	path = "/api.xro/2.0/invoices"
 )
 
-type address struct {
-	XMLName     xml.Name `xml:"address"`
-	AddressType string
-	Country     string
+// Address is the Contact Address model
+type Address struct {
+	XMLName      xml.Name `xml:"Address"`
+	AddressType  string
+	AddressLine1 string
+	AddressLine2 string
+	City         string
+	Region       string
+	PostalCode   string
+	Country      string
 }
 
-type contactType struct {
+// ContactType is the Invoice Contact content model
+type ContactType struct {
 	XMLName   xml.Name `xml:"Contact"`
 	Name      string
-	Addresses []address
+	Addresses []Address `xml:"Addresses>Address"`
 }
 
-type lineItemObj struct {
+// LineItemObj is the LineItem content model
+type LineItemObj struct {
 	Description string
 	Quantity    string
 	UnitAmount  string
 	AccountCode string
 }
 
-type lineItem struct {
-	LineItem lineItemObj
+// LineItem is the Invoice LineItem model
+type LineItem struct {
+	LineItem LineItemObj
 }
 
-// Invoice is the invoice model
+// Invoice is the Invoice model
 type Invoice struct {
 	XMLName         xml.Name `xml:"Invoice"`
+	InvoiceID       string   `xml:",omitempty"`
+	InvoiceNumber   string   `xml:",omitempty"`
 	Type            string
-	Contact         contactType
+	Contact         ContactType
 	Date            string
 	DueDate         string
 	LineAmountTypes string
-	LineItems       lineItem
+	LineItems       LineItem
+}
+
+type response struct {
+	ID           string `xml:"Id"`
+	Status       string
+	ProviderName string
+	DateTimeUTC  string
+	Invoices     []Invoice `xml:"Invoices>Invoice"`
+}
+
+type apiException struct {
+	XMLName     xml.Name `xml:"ApiException"`
+	Type        string
+	ErrorNumber int
+	Message     string
 }
 
 // New creates an invoice
 func New(inv Invoice) (resp string, err error) {
 
+	var invoiceSaved response
+	var errorResponse apiException
+
 	xmlString, marshalErr := xml.Marshal(inv)
 	if marshalErr != nil {
-		log.Printf("error: %v\n", marshalErr)
+		log.Printf("error: %#v\n", marshalErr)
+		return "", marshalErr
 	}
 
 	resp, err = xero.PostRequest(path, string(xmlString))
 	if err != nil {
-		log.Printf("[xero invoice New] - error: %v\n", err)
+		log.Printf("[xero invoice New] - error: %#v\n", err)
 		return "", err
 	}
-	return resp, nil
+
+	//log.Printf("\n\n[xero invoice New] - Invoice Saved XML: %s\n", string(resp))
+	savedMarshalErr := xml.Unmarshal([]byte(resp), &invoiceSaved)
+	if savedMarshalErr != nil {
+		log.Printf("[xero invoice New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
+		return "", savedMarshalErr
+	}
+
+	if invoiceSaved.Status != "OK" {
+		apiMarshalErr := xml.Unmarshal([]byte(resp), &errorResponse)
+		if apiMarshalErr != nil {
+			return "", apiMarshalErr
+		}
+		return "", errors.New(errorResponse.Message)
+	}
+
+	//log.Printf("\n\n[xero invoice New] - Invoice Saved: %#v\n", invoiceSaved)
+	response := map[string]string{
+		"InvoiceID":     invoiceSaved.Invoices[0].InvoiceID,
+		"InvoiceNumber": invoiceSaved.Invoices[0].InvoiceNumber}
+	jsonResponse, _ := json.Marshal(response)
+	return string(jsonResponse), nil
 }
 
 // Query gets the invoices list
 func Query() (resp string, err error) {
 
+	//var invoicesList response
+
 	resp, err = xero.Request("GET", path)
 	if err != nil {
-		log.Printf("[xero invoice Query] - error: %v\n", err)
+		log.Printf("[xero invoice Query] - error: %#v\n", err)
 		return "", err
 	}
 
+	// log.Printf("\n\n[xero invoice Query] - Invoices List XML: %s\n", string(resp))
+	// savedMarshalErr := xml.Unmarshal([]byte(resp), &invoicesList)
+	// if savedMarshalErr != nil {
+	// 	log.Printf("[xero invoices Query] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
+	// 	return "", savedMarshalErr
+	// }
+	// //log.Printf("\n\n[xero invoice Query] - Invoices List: %#v\n", invoicesList)
+	//
+	// if invoicesList.Status != "OK" {
+	// 	log.Printf("[xero invoices Query] - Cannot List invoices, Status: %s", invoicesList.Status)
+	// 	return "", fmt.Errorf("Cannot List invoices, Status: %s", invoicesList.Status)
+	// }
+	//
+	// jsonResponse, _ := json.Marshal(invoicesList.Invoices)
 	return resp, nil
 }

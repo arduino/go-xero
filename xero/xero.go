@@ -45,7 +45,7 @@ func NewClient(token string, key []byte) error {
 	privateKey, ParseKeyErr := x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	if ParseKeyErr != nil {
-		log.Printf("[xero NewClient] - Parse private key ERROR: %v", ParseKeyErr)
+		log.Printf("[xero NewClient] - Parse private key ERROR: %#v", ParseKeyErr)
 		return ParseKeyErr
 	}
 
@@ -53,10 +53,10 @@ func NewClient(token string, key []byte) error {
 		TemporaryCredentialRequestURI: requestTokenURL,
 		ResourceOwnerAuthorizationURI: authorizeTokenURL,
 		TokenRequestURI:               accessTokenURL,
-		Header:                        http.Header{"Accept": {"application/xml"}},
-		SignatureMethod:               oauth.RSASHA1,
-		Credentials:                   oauth.Credentials{Token: token},
-		PrivateKey:                    privateKey,
+		//Header:                        http.Header{"Accept": {"application/json"}},
+		SignatureMethod: oauth.RSASHA1,
+		Credentials:     oauth.Credentials{Token: token},
+		PrivateKey:      privateKey,
 	}
 
 	return nil
@@ -69,7 +69,7 @@ func PostRequest(path string, payload string) (response string, err error) {
 
 	req, reqErr := http.NewRequest("POST", baseURL, strings.NewReader(form.Encode()))
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %v\n", reqErr)
+		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -77,14 +77,15 @@ func PostRequest(path string, payload string) (response string, err error) {
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, "POST", req.URL, nil)
 	if headerErr != nil {
-		log.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %v\n", headerErr)
+		log.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %#v\n", headerErr)
 		return "", headerErr
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	//req.Header.Set("Accept", "application/json")
 
 	resp, reqErr := client.Post(http.DefaultClient, &client.Credentials, req.URL.String(), form)
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %v\n", reqErr)
+		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -100,7 +101,7 @@ func Request(method string, path string) (response string, err error) {
 
 	req, err := http.NewRequest(method, baseURL, nil)
 	if err != nil {
-		log.Printf("[xero Request] - error: %v\n", err)
+		log.Printf("[xero Request] - error: %#v\n", err)
 		return "", err
 	}
 
@@ -108,15 +109,16 @@ func Request(method string, path string) (response string, err error) {
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	req.Header.Set("Accept", "application/json")
 
 	if headerErr != nil {
-		log.Printf("[xero Request] - SetAuthorizationHeader Error: %v\n", headerErr)
+		log.Printf("[xero Request] - SetAuthorizationHeader Error: %#v\n", headerErr)
 		return "", headerErr
 	}
 
 	resp, reqErr := http.DefaultClient.Do(req)
 	if reqErr != nil {
-		log.Printf("[xero Request] - Error: %v\n", reqErr)
+		log.Printf("[xero Request] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
