@@ -30,6 +30,15 @@ const (
 	path = "/api.xro/2.0/invoices"
 )
 
+const (
+	// InvoiceLineAmountTypeEXCLUSIVE - Invoice lines are exclusive of tax (default)
+	InvoiceLineAmountTypeEXCLUSIVE = "Exclusive"
+	// InvoiceLineAmountTypeINCLUSIVE - Invoice lines are inclusive tax
+	InvoiceLineAmountTypeINCLUSIVE = "Inclusive"
+	// InvoiceLineAmountTypeNOTAX - Invoices lines have no tax
+	InvoiceLineAmountTypeNOTAX = "NoTax"
+)
+
 // Address is the Contact Address model
 type Address struct {
 	XMLName      xml.Name `xml:"Address"`
@@ -64,20 +73,21 @@ type LineItem struct {
 
 // Invoice is the Invoice model
 type Invoice struct {
-	XMLName         xml.Name `xml:"Invoice"`
-	InvoiceID       string   `xml:",omitempty"`
-	InvoiceNumber   string   `xml:",omitempty"`
-	Type            string
-	Contact         ContactType
-	Date            string
-	DueDate         string
+	XMLName       xml.Name `xml:"Invoice"`
+	InvoiceID     string   `xml:",omitempty"`
+	InvoiceNumber string   `xml:",omitempty"`
+	Type          string
+	Contact       ContactType
+	Date          string
+	DueDate       string
+	//Status          string
 	LineAmountTypes string
 	LineItems       LineItem
 }
 
 type response struct {
 	ID           string `xml:"Id"`
-	Status       string
+	Status       string `xml:",omitempty"`
 	ProviderName string
 	DateTimeUTC  string
 	Invoices     []Invoice `xml:"Invoices>Invoice"`
@@ -120,6 +130,7 @@ func New(inv Invoice) (resp string, err error) {
 		if apiMarshalErr != nil {
 			return "", apiMarshalErr
 		}
+		log.Printf("[xero invoice New] - Xero Api Error in Response: %#v\n", errorResponse)
 		return "", errors.New(errorResponse.Message)
 	}
 
