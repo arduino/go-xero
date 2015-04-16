@@ -73,16 +73,17 @@ type LineItem struct {
 
 // Invoice is the Invoice model
 type Invoice struct {
-	XMLName       xml.Name `xml:"Invoice"`
-	InvoiceID     string   `xml:",omitempty"`
-	InvoiceNumber string   `xml:",omitempty"`
-	Type          string
-	Contact       ContactType
-	Date          string
-	DueDate       string
-	//Status          string
+	XMLName         xml.Name `xml:"Invoice"`
+	InvoiceID       string   `xml:",omitempty"`
+	InvoiceNumber   string   `xml:",omitempty"`
+	Type            string
+	Contact         ContactType
+	Date            string
+	DueDate         string
+	Status          string
 	LineAmountTypes string
 	LineItems       LineItem
+	Reference       string
 }
 
 type response struct {
@@ -93,18 +94,11 @@ type response struct {
 	Invoices     []Invoice `xml:"Invoices>Invoice"`
 }
 
-type apiException struct {
-	XMLName     xml.Name `xml:"ApiException"`
-	Type        string
-	ErrorNumber int
-	Message     string
-}
-
 // New creates an invoice
 func New(inv Invoice) (resp string, err error) {
 
 	var invoiceSaved response
-	var errorResponse apiException
+	var errorResponse xero.ApiException
 
 	xmlString, marshalErr := xml.Marshal(inv)
 	if marshalErr != nil {

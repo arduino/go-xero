@@ -20,6 +20,7 @@ package xero
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"encoding/xml"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -37,6 +38,14 @@ const (
 )
 
 var client oauth.Client
+
+// ApiException model for error response
+type ApiException struct {
+	XMLName     xml.Name `xml:"ApiException"`
+	Type        string
+	ErrorNumber int
+	Message     string
+}
 
 // NewClient initializes the oauth Client
 func NewClient(token string, key []byte) error {
