@@ -47,6 +47,7 @@ type Payment struct {
 	Account   AccountParam
 	Date      string
 	Amount    string
+	Reference string
 }
 
 type response struct {
