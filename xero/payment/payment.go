@@ -50,6 +50,10 @@ type Payment struct {
 	Reference string
 }
 
+type payments struct {
+	Payments []Payment
+}
+
 type response struct {
 	ID           string `xml:"Id"`
 	Status       string `xml:",omitempty"`
@@ -58,40 +62,49 @@ type response struct {
 	Payments     []Payment `xml:"Payments>Payment"`
 }
 
-// New creates a payment for the given Invoice
-func New(paym Payment) (resp string, err error) {
+// New creates one or more payments for the given Invoices
+func New(paym []Payment) ([]string, error) {
+
+	var paymentsToSave payments
+
+	paymentsToSave.Payments = paym
 
 	var paymentSaved response
 	var errorResponse xero.ApiException
 
-	xmlString, marshalErr := xml.Marshal(paym)
+	xmlString, marshalErr := xml.Marshal(paymentsToSave)
 	if marshalErr != nil {
 		log.Printf("error: %#v\n", marshalErr)
-		return "", marshalErr
+		return nil, marshalErr
 	}
 
-	resp, err = xero.PostRequest(path, string(xmlString))
+	resp, err := xero.PostRequest(path, string(xmlString))
 	if err != nil {
 		log.Printf("[xero payment New] - error: %#v\n", err)
-		return "", err
+		return nil, err
 	}
 
 	//log.Printf("\n\n[xero payment New] - Payment Saved XML: %s\n", string(resp))
 	savedMarshalErr := xml.Unmarshal([]byte(resp), &paymentSaved)
 	if savedMarshalErr != nil {
 		log.Printf("[xero payment New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
-		return "", savedMarshalErr
+		return nil, savedMarshalErr
 	}
 
 	if paymentSaved.Status != "OK" {
 		apiMarshalErr := xml.Unmarshal([]byte(resp), &errorResponse)
 		if apiMarshalErr != nil {
-			return "", apiMarshalErr
+			return nil, apiMarshalErr
 		}
 		log.Printf("[xero payment New] - Xero Api Error in Response: %#v\n", errorResponse)
-		return "", errors.New(errorResponse.Message)
+		return nil, errors.New(errorResponse.Message)
 	}
 
-	return paymentSaved.Payments[0].PaymentID, nil
+	var payments []string
+	for _, payment := range paymentSaved.Payments {
+		payments = append(payments, payment.PaymentID)
+	}
+
+	return payments, nil
 
 }

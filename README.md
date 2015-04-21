@@ -46,10 +46,18 @@ Get the invoices list
 invoice.Query()
 ```
 
-Create new invoice
+Create new invoice / invoices
 
 ```go
 var invoiceToSave invoice.Invoice
 // ... invoiceToSave marshal / population
-r, err := invoice.New(invoiceToSave)
+r, err := invoice.New([]invoice.Invoice{invoiceToSave})
+```
+
+Create new payment / payments
+
+```go
+var paymentToSave payment.Payment
+// ... paymentToSave marshal / population
+r, err := payment.New([]payment.Payment{paymentToSave})
 ```

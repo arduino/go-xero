@@ -73,17 +73,22 @@ type LineItem struct {
 
 // Invoice is the Invoice model
 type Invoice struct {
-	XMLName         xml.Name `xml:"Invoice"`
-	InvoiceID       string   `xml:",omitempty"`
-	InvoiceNumber   string   `xml:",omitempty"`
-	Type            string
-	Contact         ContactType
-	Date            string
-	DueDate         string
-	Status          string
-	LineAmountTypes string
-	LineItems       LineItem
-	Reference       string
+	XMLName             xml.Name `xml:"Invoice"`
+	InvoiceID           string   `xml:",omitempty"`
+	InvoiceNumber       string   `xml:",omitempty"`
+	Type                string
+	Contact             ContactType
+	Date                string
+	DueDate             string
+	ExpectedPaymentDate string
+	Status              string
+	LineAmountTypes     string
+	LineItems           LineItem
+	Reference           string
+}
+
+type invoices struct {
+	Invoices []Invoice `xml:"Invoices"`
 }
 
 type response struct {
@@ -94,18 +99,21 @@ type response struct {
 	Invoices     []Invoice `xml:"Invoices>Invoice"`
 }
 
-// New creates an invoice
-func New(inv Invoice) (resp string, err error) {
+// New creates one or more invoices
+func New(inv []Invoice) (resp string, err error) {
 
 	var invoiceSaved response
 	var errorResponse xero.ApiException
 
-	xmlString, marshalErr := xml.Marshal(inv)
+	var invoicesToSave invoices
+
+	invoicesToSave.Invoices = inv
+	xmlString, marshalErr := xml.Marshal(invoicesToSave)
 	if marshalErr != nil {
 		log.Printf("error: %#v\n", marshalErr)
 		return "", marshalErr
 	}
-
+	//log.Printf("\n\n[xero invoice New] - Invoice XML to send: %s\n", string(xmlString))
 	resp, err = xero.PostRequest(path, string(xmlString))
 	if err != nil {
 		log.Printf("[xero invoice New] - error: %#v\n", err)
@@ -128,11 +136,19 @@ func New(inv Invoice) (resp string, err error) {
 		return "", errors.New(errorResponse.Message)
 	}
 
-	//log.Printf("\n\n[xero invoice New] - Invoice Saved: %#v\n", invoiceSaved)
-	response := map[string]string{
-		"InvoiceID":     invoiceSaved.Invoices[0].InvoiceID,
-		"InvoiceNumber": invoiceSaved.Invoices[0].InvoiceNumber}
-	jsonResponse, _ := json.Marshal(response)
+	log.Printf("\n\n[xero invoice New] - Invoice Saved: %#v\n", invoiceSaved)
+	var itemsSaved []map[string]string
+	for _, invoice := range invoiceSaved.Invoices {
+		item := map[string]string{
+			"InvoiceID":           invoice.InvoiceID,
+			"InvoiceNumber":       invoice.InvoiceNumber,
+			"Reference":           invoice.Reference,
+			"ExpectedPaymentDate": invoice.ExpectedPaymentDate,
+			"Amount":              invoice.LineItems.LineItem.UnitAmount}
+		itemsSaved = append(itemsSaved, item)
+	}
+
+	jsonResponse, _ := json.Marshal(itemsSaved)
 	return string(jsonResponse), nil
 }
 
