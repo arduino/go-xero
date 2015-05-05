@@ -19,6 +19,8 @@ Import it in your Go code:
 import (
   "github.com/arduino/go-xero/xero"
   "github.com/arduino/go-xero/xero/invoice"
+  "github.com/arduino/go-xero/xero/manual-journal"
+  "github.com/arduino/go-xero/xero/payment"
 )
 ```
 
@@ -60,4 +62,12 @@ Create new payment / payments
 var paymentToSave payment.Payment
 // ... paymentToSave marshal / population
 r, err := payment.New([]payment.Payment{paymentToSave})
+```
+
+Create new journal
+
+```go
+var journalToSave manualjournal.Journal
+// ... journalToSave marshal / population
+r, err := manualjournal.New(journalToSave)
 ```
