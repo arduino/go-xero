@@ -105,8 +105,15 @@ func PostRequest(path string, payload string) (response string, err error) {
 	return string(body), nil
 }
 
+type options struct {
+	modifiedAfter string
+	where         string
+	order         string
+	page          int
+}
+
 // Request sends requests to xero APIs
-func Request(method string, path string) (response string, err error) {
+func Request(method string, path string, otherOptions options) (response string, err error) {
 
 	req, err := http.NewRequest(method, baseURL, nil)
 	if err != nil {
@@ -117,6 +124,9 @@ func Request(method string, path string) (response string, err error) {
 	req.URL.Opaque = path
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
+	if otherOptions.where != "" {
+		req.Header.Set("If-Modified-Since", otherOptions.where)
+	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	req.Header.Set("Accept", "application/json")
 
