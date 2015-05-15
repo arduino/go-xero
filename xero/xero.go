@@ -175,9 +175,10 @@ func (client Xoauth) GetAllInvoices() (allInvoices invoice.Invoices, err error) 
 	invoiceOptions.Values = url.Values{}
 	// this is a do while statement
 	// it stops paging if the are no more invoices
-	for i := 1; len(invoiceList.Invoices) > 0 || i == 1; i++ {
+	for i := 1; ; i++ {
 		invoiceOptions.Values.Set("page", strconv.Itoa(i))
-		response, reqErr := client.Request("GET", "/api.xro/2.0/Invoices", &invoiceOptions)
+
+		response, reqErr := client.Request("GET", invoice.Path, &invoiceOptions)
 		if reqErr != nil {
 			jww.ERROR.Printf("[xero invoice GetAllInvoices] - Error response: %#v", reqErr)
 		}
@@ -188,6 +189,11 @@ func (client Xoauth) GetAllInvoices() (allInvoices invoice.Invoices, err error) 
 		}
 		// jww.DEBUG.Printf("invoice list: %v", invoiceList.Invoices)
 		responseList = append(responseList, invoiceList)
+
+		// if there are no more invoices to fecth, stop asking for them
+		if len(invoiceList.Invoices) <= 0 {
+			break
+		}
 		// clean up the invoice list for the next request
 		invoiceList = invoice.Response{}
 		// avoid xero limit, there is a limit of 60 req/min we wait 60s every 50 reqs
