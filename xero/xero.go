@@ -165,7 +165,7 @@ func (client Xoauth) Request(method string, path string, otherOptions *Options) 
 
 }
 
-func (client Xoauth) GetAllInvoices() (invoices []invoice.Response, err error) {
+func (client Xoauth) GetAllInvoices() (allInvoices invoice.Invoices, err error) {
 
 	var invoiceOptions Options
 	var invoiceList invoice.Response
@@ -173,7 +173,9 @@ func (client Xoauth) GetAllInvoices() (invoices []invoice.Response, err error) {
 
 	// invoiceOptions.ModifiedAfter = "2014-01-01T00:00:00"
 	invoiceOptions.Values = url.Values{}
-	for i := 1; i <= 30; i++ {
+	// this is a do while statement
+	// it stops paging if the are no more invoices
+	for i := 1; len(invoiceList.Invoices) > 0 || i == 1; i++ {
 		invoiceOptions.Values.Set("page", strconv.Itoa(i))
 		response, err1 := client.Request("GET", "/api.xro/2.0/Invoices", &invoiceOptions)
 		if err1 != nil {
@@ -182,20 +184,22 @@ func (client Xoauth) GetAllInvoices() (invoices []invoice.Response, err error) {
 		invoicesMarshalErr := xml.Unmarshal([]byte(response), &invoiceList)
 		if invoicesMarshalErr != nil {
 			log.Printf("[xero invoice New] - Xml Unmarshal Error: %#v\n", invoicesMarshalErr)
-			return invoices, invoicesMarshalErr
+			return allInvoices, invoicesMarshalErr
 		}
+		// log.Printf("invoice list: %v", invoiceList.Invoices)
 		responseList = append(responseList, invoiceList)
 		// clean up the invoice list for the next request
 		invoiceList = invoice.Response{}
-
+		// avoid xero limit, there is a limit of 60 req/min we wait 60s every 50 reqs
 		if i%50 == 0 {
 			jww.DEBUG.Printf("i:%d", i)
 			time.Sleep(60 * time.Second)
 		}
 	}
 
-	// log.Printf("responseList: %#v\n", pretty.Formatter(responseList))
-
-	return responseList, nil
-
+	for singleResponse := range responseList {
+		allInvoices.Invoices = append(allInvoices.Invoices, responseList[singleResponse].Invoices...)
+	}
+	// log.Printf("tipo b: %v", allInvoices.Invoices)
+	return allInvoices, nil
 }

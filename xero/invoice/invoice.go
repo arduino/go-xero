@@ -24,7 +24,8 @@ import "encoding/xml"
 // "github.com/arduino/go-xero/xero"
 
 const (
-	path = "/api.xro/2.0/invoices"
+	// Path is the relative API path for invoices
+	Path = "/api.xro/2.0/invoices"
 )
 
 const (
