@@ -21,14 +21,18 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"log"
 
 	"github.com/arduino/go-xero/xero"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 const (
 	path = "/api.xro/2.0/ManualJournals"
 )
+
+type Xclient struct {
+	client xero.Xoauth
+}
 
 // JournalLineObj is the JournalLine single object model
 type JournalLineObj struct {
@@ -60,27 +64,27 @@ type response struct {
 }
 
 // New creates one Journal
-func New(journ Journal) (resp string, err error) {
+func (journClient Xclient) New(journ Journal) (resp string, err error) {
 
 	var journalSaved response
-	var errorResponse xero.ApiException
+	var errorResponse xero.APIException
 
 	xmlString, marshalErr := xml.Marshal(journ)
 	if marshalErr != nil {
-		log.Printf("error: %#v\n", marshalErr)
+		jww.ERROR.Printf("error: %#v\n", marshalErr)
 		return "", marshalErr
 	}
-	//log.Printf("\n\n[xero manual jorunal New] - Journal XML to send: %s\n", string(xmlString))
-	resp, err = xero.PostRequest(path, string(xmlString))
+	//jww.ERROR.Printf("\n\n[xero manual jorunal New] - Journal XML to send: %s\n", string(xmlString))
+	resp, err = journClient.client.PostRequest(path, string(xmlString))
 	if err != nil {
-		log.Printf("[xero manual journal New] - error: %#v\n", err)
+		jww.ERROR.Printf("[xero manual journal New] - error: %#v\n", err)
 		return "", err
 	}
 
-	//log.Printf("\n\n[xero manual journal New] - Manual Journal Saved XML: %s\n", string(resp))
+	//jww.ERROR.Printf("\n\n[xero manual journal New] - Manual Journal Saved XML: %s\n", string(resp))
 	savedMarshalErr := xml.Unmarshal([]byte(resp), &journalSaved)
 	if savedMarshalErr != nil {
-		log.Printf("[xero manual journal New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
+		jww.ERROR.Printf("[xero manual journal New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
 		return "", savedMarshalErr
 	}
 
@@ -89,11 +93,11 @@ func New(journ Journal) (resp string, err error) {
 		if apiMarshalErr != nil {
 			return "", apiMarshalErr
 		}
-		log.Printf("[xero manual journal New] - Xero Api Error in Response: %#v\n", errorResponse)
+		jww.ERROR.Printf("[xero manual journal New] - Xero Api Error in Response: %#v\n", errorResponse)
 		return "", errors.New(errorResponse.Message)
 	}
 
-	log.Printf("\n\n[xero manual journal New] - Manual Journal Saved: %#v\n", journalSaved)
+	jww.DEBUG.Printf("\n\n[xero manual journal New] - Manual Journal Saved: %#v\n", journalSaved)
 	var itemsSaved []map[string]string
 	for _, journal := range journalSaved.Journals {
 		item := map[string]string{

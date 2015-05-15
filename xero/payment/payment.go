@@ -29,6 +29,10 @@ const (
 	path = "/api.xro/2.0/Payments"
 )
 
+type Xclient struct {
+	client xero.Xoauth
+}
+
 // InvoiceParam is the model with the Invoice Number
 type InvoiceParam struct {
 	InvoiceNumber string
@@ -63,14 +67,14 @@ type response struct {
 }
 
 // New creates one or more payments for the given Invoices
-func New(paym []Payment) ([]string, error) {
+func (paymClient Xclient) New(paym []Payment) ([]string, error) {
 
 	var paymentsToSave payments
 
 	paymentsToSave.Payments = paym
 
 	var paymentSaved response
-	var errorResponse xero.ApiException
+	var errorResponse xero.APIException
 
 	xmlString, marshalErr := xml.Marshal(paymentsToSave)
 	if marshalErr != nil {
@@ -78,7 +82,7 @@ func New(paym []Payment) ([]string, error) {
 		return nil, marshalErr
 	}
 
-	resp, err := xero.PostRequest(path, string(xmlString))
+	resp, err := paymClient.client.PostRequest(path, string(xmlString))
 	if err != nil {
 		log.Printf("[xero payment New] - error: %#v\n", err)
 		return nil, err

@@ -22,17 +22,12 @@ import (
 	"encoding/pem"
 	"encoding/xml"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
-	jww "github.com/spf13/jwalterweatherman"
-
-	"github.com/arduino/go-xero/xero/invoice"
 	"github.com/garyburd/go-oauth/oauth"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 const (
@@ -45,8 +40,8 @@ const (
 // this is global, it's very bad!
 // var client oauth.Client
 
-// ApiException model for error response
-type ApiException struct {
+// APIException model for error response
+type APIException struct {
 	XMLName     xml.Name `xml:"ApiException"`
 	Type        string
 	ErrorNumber int
@@ -65,7 +60,7 @@ func NewClient(token string, key []byte) (client Xoauth, err error) {
 	privateKey, ParseKeyErr := x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	if ParseKeyErr != nil {
-		log.Printf("[xero NewClient] - Parse private key ERROR: %#v", ParseKeyErr)
+		jww.ERROR.Printf("[xero NewClient] - Parse private key ERROR: %#v", ParseKeyErr)
 		return Xoauth{}, ParseKeyErr
 	}
 
@@ -92,7 +87,7 @@ func (client Xoauth) PostRequest(path string, payload string) (response string, 
 
 	req, reqErr := http.NewRequest("POST", baseURL, strings.NewReader(form.Encode()))
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
+		jww.ERROR.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -100,7 +95,7 @@ func (client Xoauth) PostRequest(path string, payload string) (response string, 
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, "POST", req.URL, nil)
 	if headerErr != nil {
-		log.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %#v\n", headerErr)
+		jww.ERROR.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %#v\n", headerErr)
 		return "", headerErr
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
@@ -108,7 +103,7 @@ func (client Xoauth) PostRequest(path string, payload string) (response string, 
 
 	resp, reqErr := client.Post(http.DefaultClient, &client.Credentials, req.URL.String(), form)
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
+		jww.ERROR.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -129,9 +124,9 @@ type Options struct {
 func (client Xoauth) Request(method string, path string, otherOptions *Options) (response string, err error) {
 
 	req, err := http.NewRequest(method, baseURL, nil)
-	log.Printf("[xero Request] -  req in NewRequest: %#v\n", req.URL.String())
+	jww.DEBUG.Printf("[xero Request] -  req in NewRequest: %#v\n", req.URL.String())
 	if err != nil {
-		log.Printf("[xero Request] - error in NewRequest: %#v\n", err)
+		jww.ERROR.Printf("[xero Request] - error in NewRequest: %#v\n", err)
 		return "", err
 	}
 
@@ -143,17 +138,17 @@ func (client Xoauth) Request(method string, path string, otherOptions *Options) 
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
 	if headerErr != nil {
-		log.Printf("[xero Request] - SetAuthorizationHeader Error: %#v\n", headerErr)
+		jww.ERROR.Printf("[xero Request] - SetAuthorizationHeader Error: %#v\n", headerErr)
 		return "", headerErr
 	}
-	// log.Printf("other options: %v", otherOptions)
+	// jww.DEBUG.Printf("other options: %v", otherOptions)
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	// req.Header.Set("Accept", "application/json")
-	// log.Printf("[xero Request] - req: %v\n", req)
+	// jww.DEBUG.Printf("[xero Request] - req: %v\n", req)
 	resp, reqErr := http.DefaultClient.Do(req)
 	if reqErr != nil {
-		log.Printf("[xero Request] - Error in Do: %#v %#v\n", req, reqErr)
+		jww.ERROR.Printf("[xero Request] - Error in Do: %#v %#v\n", req, reqErr)
 		return "", reqErr
 	}
 
@@ -162,40 +157,5 @@ func (client Xoauth) Request(method string, path string, otherOptions *Options) 
 	resp.Body.Close()
 
 	return string(body), nil
-
-}
-
-func (client Xoauth) GetAllInvoices() (invoices []invoice.Response, err error) {
-
-	var invoiceOptions Options
-	var invoiceList invoice.Response
-	var responseList []invoice.Response
-
-	// invoiceOptions.ModifiedAfter = "2014-01-01T00:00:00"
-	invoiceOptions.Values = url.Values{}
-	for i := 1; i <= 30; i++ {
-		invoiceOptions.Values.Set("page", strconv.Itoa(i))
-		response, err1 := client.Request("GET", "/api.xro/2.0/Invoices", &invoiceOptions)
-		if err1 != nil {
-			jww.DEBUG.Printf("response: %v\n %#v", response, err1)
-		}
-		invoicesMarshalErr := xml.Unmarshal([]byte(response), &invoiceList)
-		if invoicesMarshalErr != nil {
-			log.Printf("[xero invoice New] - Xml Unmarshal Error: %#v\n", invoicesMarshalErr)
-			return invoices, invoicesMarshalErr
-		}
-		responseList = append(responseList, invoiceList)
-		// clean up the invoice list for the next request
-		invoiceList = invoice.Response{}
-
-		if i%50 == 0 {
-			jww.DEBUG.Printf("i:%d", i)
-			time.Sleep(60 * time.Second)
-		}
-	}
-
-	// log.Printf("responseList: %#v\n", pretty.Formatter(responseList))
-
-	return responseList, nil
 
 }
