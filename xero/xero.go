@@ -24,13 +24,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/arduino/go-xero/xero/invoice"
 	"github.com/garyburd/go-oauth/oauth"
 )
 
@@ -79,8 +76,6 @@ func NewClient(token string, key []byte) (client Xoauth, err error) {
 			PrivateKey:      privateKey,
 		}}
 
-	// myclient := Xoauth{&client}
-	// myclient := &client
 	return client, ParseKeyErr
 }
 
@@ -162,50 +157,4 @@ func (client Xoauth) Request(method string, path string, otherOptions *Options) 
 
 	return string(body), nil
 
-}
-
-// GetAllInvoices gives you all the invoices of the org
-func (client Xoauth) GetAllInvoices() (allInvoices invoice.Invoices, err error) {
-
-	var invoiceOptions Options
-	var invoiceList invoice.Response
-	var responseList []invoice.Response
-
-	// invoiceOptions.ModifiedAfter = "2014-01-01T00:00:00"
-	invoiceOptions.Values = url.Values{}
-	// this is a do while statement
-	// it stops paging if the are no more invoices
-	for i := 1; ; i++ {
-		invoiceOptions.Values.Set("page", strconv.Itoa(i))
-
-		response, reqErr := client.Request("GET", invoice.Path, &invoiceOptions)
-		if reqErr != nil {
-			jww.ERROR.Printf("[xero invoice GetAllInvoices] - Error response: %#v", reqErr)
-		}
-		invoicesMarshalErr := xml.Unmarshal([]byte(response), &invoiceList)
-		if invoicesMarshalErr != nil {
-			jww.ERROR.Printf("[xero invoice GetAllInvoices] - Xml Unmarshal Error: %#v\n", invoicesMarshalErr)
-			return allInvoices, invoicesMarshalErr
-		}
-		// jww.DEBUG.Printf("invoice list: %v", invoiceList.Invoices)
-		responseList = append(responseList, invoiceList)
-
-		// if there are no more invoices to fecth, stop asking for them
-		if len(invoiceList.Invoices) <= 0 {
-			break
-		}
-		// clean up the invoice list for the next request
-		invoiceList = invoice.Response{}
-		// avoid xero limit, there is a limit of 60 req/min we wait 60s every 50 reqs
-		if i%50 == 0 {
-			jww.DEBUG.Printf("i:%d", i)
-			time.Sleep(60 * time.Second)
-		}
-	}
-
-	for singleResponse := range responseList {
-		allInvoices.Invoices = append(allInvoices.Invoices, responseList[singleResponse].Invoices...)
-	}
-	// jww.DEBUG.Printf("tipo b: %v", allInvoices.Invoices)
-	return allInvoices, nil
 }

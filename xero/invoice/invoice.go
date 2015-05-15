@@ -19,13 +19,9 @@ package invoice
 
 import "encoding/xml"
 
-// "github.com/arduino/go-xero/xero"
-
-// "github.com/arduino/go-xero/xero"
-
 const (
 	// Path is the relative API path for invoices
-	Path = "/api.xro/2.0/invoices"
+	Path = "/api.xro/2.0/Invoices"
 )
 
 const (
@@ -90,7 +86,7 @@ type Invoices struct {
 	Invoices []Invoice `xml:"Invoices"`
 }
 
-// Response is the xero request response model
+// Response is the xero request response model for invoices
 type Response struct {
 	ID           string `xml:"Id"`
 	Status       string `xml:",omitempty"`
@@ -98,84 +94,3 @@ type Response struct {
 	DateTimeUTC  string
 	Invoices     []Invoice `xml:"Invoices>Invoice"`
 }
-
-// // New creates one or more invoices
-// func New(client xero.Xoauth, inv []Invoice) (resp string, err error) {
-//
-// 	var invoiceSaved response
-// 	var errorResponse xero.ApiException
-//
-// 	var invoicesToSave invoices
-//
-// 	invoicesToSave.Invoices = inv
-// 	xmlString, marshalErr := xml.Marshal(invoicesToSave)
-// 	if marshalErr != nil {
-// 		jww.ERROR.Printf("error: %#v\n", marshalErr)
-// 		return "", marshalErr
-// 	}
-// 	//jww.ERROR.Printf("\n\n[xero invoice New] - Invoice XML to send: %s\n", string(xmlString))
-// 	resp, err = client.PostRequest(path, string(xmlString))
-// 	if err != nil {
-// 		jww.ERROR.Printf("[xero invoice New] - error: %#v\n", err)
-// 		return "", err
-// 	}
-//
-// 	//jww.DEBUG.Printf("\n\n[xero invoice New] - Invoice Saved XML: %s\n", string(resp))
-// 	savedMarshalErr := xml.Unmarshal([]byte(resp), &invoiceSaved)
-// 	if savedMarshalErr != nil {
-// 		jww.ERROR.Printf("[xero invoice New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
-// 		return "", savedMarshalErr
-// 	}
-//
-// 	if invoiceSaved.Status != "OK" {
-// 		apiMarshalErr := xml.Unmarshal([]byte(resp), &errorResponse)
-// 		if apiMarshalErr != nil {
-// 			return "", apiMarshalErr
-// 		}
-// 		jww.ERROR.Printf("[xero invoice New] - Xero Api Error in Response: %#v\n", errorResponse)
-// 		return "", errors.New(errorResponse.Message)
-// 	}
-//
-// 	jww.ERROR.Printf("\n\n[xero invoice New] - Invoice Saved: %#v\n", invoiceSaved)
-// 	var itemsSaved []map[string]string
-// 	for _, invoice := range invoiceSaved.Invoices {
-// 		item := map[string]string{
-// 			"InvoiceID":           invoice.InvoiceID,
-// 			"InvoiceNumber":       invoice.InvoiceNumber,
-// 			"Reference":           invoice.Reference,
-// 			"ExpectedPaymentDate": invoice.ExpectedPaymentDate,
-// 			"Amount":              invoice.LineItems.LineItem.UnitAmount}
-// 		itemsSaved = append(itemsSaved, item)
-// 	}
-//
-// 	jsonResponse, _ := json.Marshal(itemsSaved)
-// 	return string(jsonResponse), nil
-// }
-
-// // Query gets the invoices list
-// func Query() (resp string, err error) {
-//
-// 	//var invoicesList response
-//
-// 	resp, err = xero.Request("GET", path)
-// 	if err != nil {
-// 		jww.ERROR.Printf("[xero invoice Query] - error: %#v\n", err)
-// 		return "", err
-// 	}
-//
-// 	// jww.ERROR.Printf("\n\n[xero invoice Query] - Invoices List XML: %s\n", string(resp))
-// 	// savedMarshalErr := xml.Unmarshal([]byte(resp), &invoicesList)
-// 	// if savedMarshalErr != nil {
-// 	// 	jww.ERROR.Printf("[xero invoices Query] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
-// 	// 	return "", savedMarshalErr
-// 	// }
-// 	// //jww.ERROR.Printf("\n\n[xero invoice Query] - Invoices List: %#v\n", invoicesList)
-// 	//
-// 	// if invoicesList.Status != "OK" {
-// 	// 	jww.ERROR.Printf("[xero invoices Query] - Cannot List invoices, Status: %s", invoicesList.Status)
-// 	// 	return "", fmt.Errorf("Cannot List invoices, Status: %s", invoicesList.Status)
-// 	// }
-// 	//
-// 	// jsonResponse, _ := json.Marshal(invoicesList.Invoices)
-// 	return resp, nil
-// }
