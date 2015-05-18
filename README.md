@@ -35,7 +35,7 @@ if openFileErr != nil {
   return
 }
 
-xeroClientErr := xero.NewClient("your_consumer_key", keyFile)
+xeroClient, xeroClientErr := xero.NewClient("your_consumer_key", keyFile)
 if xeroClientErr != nil {
   log.Fatal("init xero client ERROR: ", xeroClientErr)
   return
@@ -45,7 +45,7 @@ if xeroClientErr != nil {
 Get the invoices list
 
 ```go
-invoice.Query()
+invoices, err := xeroClient.GetAllInvoices()
 ```
 
 Create new invoice / invoices
@@ -53,7 +53,7 @@ Create new invoice / invoices
 ```go
 var invoiceToSave invoice.Invoice
 // ... invoiceToSave marshal / population
-r, err := invoice.New([]invoice.Invoice{invoiceToSave})
+r, newInvoiceErr := xeroClient.NewInvoice([]invoice.Invoice{invoiceToSave})
 ```
 
 Create new payment / payments
@@ -61,7 +61,7 @@ Create new payment / payments
 ```go
 var paymentToSave payment.Payment
 // ... paymentToSave marshal / population
-r, err := payment.New([]payment.Payment{paymentToSave})
+r, newPaymentErr := xeroClient.NewPayment([]payment.Payment{paymentToSave})
 ```
 
 Create new journal
@@ -69,5 +69,5 @@ Create new journal
 ```go
 var journalToSave manualjournal.Journal
 // ... journalToSave marshal / population
-r, err := manualjournal.New(journalToSave)
+r, err := xeroClient.NewManualJournal(journalToSave)
 ```
