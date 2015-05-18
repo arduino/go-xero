@@ -17,17 +17,11 @@
 
 package manualjournal
 
-import (
-	"encoding/json"
-	"encoding/xml"
-	"errors"
-	"log"
-
-	"github.com/arduino/go-xero/xero"
-)
+import "encoding/xml"
 
 const (
-	path = "/api.xro/2.0/ManualJournals"
+	// Path is the relative API path for Manual Journals
+	Path = "/api.xro/2.0/ManualJournals"
 )
 
 // JournalLineObj is the JournalLine single object model
@@ -51,57 +45,11 @@ type Journal struct {
 	JournalLines    []JournalLine
 }
 
-type response struct {
+// Response is the xero request response model for journals
+type Response struct {
 	ID           string `xml:"Id"`
 	Status       string `xml:",omitempty"`
 	ProviderName string
 	DateTimeUTC  string
 	Journals     []Journal `xml:"ManualJournals>ManualJournal"`
-}
-
-// New creates one Journal
-func New(journ Journal) (resp string, err error) {
-
-	var journalSaved response
-	var errorResponse xero.ApiException
-
-	xmlString, marshalErr := xml.Marshal(journ)
-	if marshalErr != nil {
-		log.Printf("error: %#v\n", marshalErr)
-		return "", marshalErr
-	}
-	//log.Printf("\n\n[xero manual jorunal New] - Journal XML to send: %s\n", string(xmlString))
-	resp, err = xero.PostRequest(path, string(xmlString))
-	if err != nil {
-		log.Printf("[xero manual journal New] - error: %#v\n", err)
-		return "", err
-	}
-
-	//log.Printf("\n\n[xero manual journal New] - Manual Journal Saved XML: %s\n", string(resp))
-	savedMarshalErr := xml.Unmarshal([]byte(resp), &journalSaved)
-	if savedMarshalErr != nil {
-		log.Printf("[xero manual journal New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
-		return "", savedMarshalErr
-	}
-
-	if journalSaved.Status != "OK" {
-		apiMarshalErr := xml.Unmarshal([]byte(resp), &errorResponse)
-		if apiMarshalErr != nil {
-			return "", apiMarshalErr
-		}
-		log.Printf("[xero manual journal New] - Xero Api Error in Response: %#v\n", errorResponse)
-		return "", errors.New(errorResponse.Message)
-	}
-
-	log.Printf("\n\n[xero manual journal New] - Manual Journal Saved: %#v\n", journalSaved)
-	var itemsSaved []map[string]string
-	for _, journal := range journalSaved.Journals {
-		item := map[string]string{
-			"JournalID": journal.ManualJournalID,
-			"Date":      journal.Date}
-		itemsSaved = append(itemsSaved, item)
-	}
-
-	jsonResponse, _ := json.Marshal(itemsSaved)
-	return string(jsonResponse), nil
 }

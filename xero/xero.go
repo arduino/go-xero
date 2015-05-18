@@ -22,10 +22,11 @@ import (
 	"encoding/pem"
 	"encoding/xml"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/garyburd/go-oauth/oauth"
 )
@@ -37,48 +38,55 @@ const (
 	baseURL           = "https://api.xero.com"
 )
 
-var client oauth.Client
+// this is global, it's very bad!
+// var client oauth.Client
 
-// ApiException model for error response
-type ApiException struct {
+// APIException model for error response
+type APIException struct {
 	XMLName     xml.Name `xml:"ApiException"`
 	Type        string
 	ErrorNumber int
 	Message     string
 }
 
+// Xoauth is a wrapper around oauth.Client
+type Xoauth struct {
+	*oauth.Client
+}
+
 // NewClient initializes the oauth Client
-func NewClient(token string, key []byte) error {
+func NewClient(token string, key []byte) (client Xoauth, err error) {
 
 	block, _ := pem.Decode(key)
 	privateKey, ParseKeyErr := x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	if ParseKeyErr != nil {
-		log.Printf("[xero NewClient] - Parse private key ERROR: %#v", ParseKeyErr)
-		return ParseKeyErr
+		jww.ERROR.Printf("[xero NewClient] - Parse private key ERROR: %#v", ParseKeyErr)
+		return Xoauth{}, ParseKeyErr
 	}
 
-	client = oauth.Client{
-		TemporaryCredentialRequestURI: requestTokenURL,
-		ResourceOwnerAuthorizationURI: authorizeTokenURL,
-		TokenRequestURI:               accessTokenURL,
-		//Header:                        http.Header{"Accept": {"application/json"}},
-		SignatureMethod: oauth.RSASHA1,
-		Credentials:     oauth.Credentials{Token: token},
-		PrivateKey:      privateKey,
-	}
+	client = Xoauth{
+		&oauth.Client{
+			TemporaryCredentialRequestURI: requestTokenURL,
+			ResourceOwnerAuthorizationURI: authorizeTokenURL,
+			TokenRequestURI:               accessTokenURL,
+			//Header:                        http.Header{"Accept": {"application/json"}},
+			SignatureMethod: oauth.RSASHA1,
+			Credentials:     oauth.Credentials{Token: token},
+			PrivateKey:      privateKey,
+		}}
 
-	return nil
+	return client, ParseKeyErr
 }
 
 // PostRequest sends POST requests to xero APIs with a form as payload
-func PostRequest(path string, payload string) (response string, err error) {
+func (client Xoauth) PostRequest(path string, payload string) (response string, err error) {
 
 	form := url.Values{"xml": {payload}}
 
 	req, reqErr := http.NewRequest("POST", baseURL, strings.NewReader(form.Encode()))
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
+		jww.ERROR.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -86,15 +94,15 @@ func PostRequest(path string, payload string) (response string, err error) {
 
 	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, "POST", req.URL, nil)
 	if headerErr != nil {
-		log.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %#v\n", headerErr)
+		jww.ERROR.Printf("[xero PostRequest] - SetAuthorizationHeader Error: %#v\n", headerErr)
 		return "", headerErr
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	//req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	resp, reqErr := client.Post(http.DefaultClient, &client.Credentials, req.URL.String(), form)
 	if reqErr != nil {
-		log.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
+		jww.ERROR.Printf("[xero PostRequest] - Error: %#v\n", reqErr)
 		return "", reqErr
 	}
 
@@ -105,29 +113,41 @@ func PostRequest(path string, payload string) (response string, err error) {
 	return string(body), nil
 }
 
+// Options adds optional parameters to Xero requests
+type Options struct {
+	ModifiedAfter string
+	Values        url.Values
+}
+
 // Request sends requests to xero APIs
-func Request(method string, path string) (response string, err error) {
+func (client Xoauth) Request(method string, path string, otherOptions *Options) (response string, err error) {
 
 	req, err := http.NewRequest(method, baseURL, nil)
+	jww.DEBUG.Printf("[xero Request] -  req in NewRequest: %#v\n", req.URL.String())
 	if err != nil {
-		log.Printf("[xero Request] - error: %#v\n", err)
+		jww.ERROR.Printf("[xero Request] - error in NewRequest: %#v\n", err)
 		return "", err
 	}
 
-	req.URL.Opaque = path
-
-	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	req.Header.Set("Accept", "application/json")
-
-	if headerErr != nil {
-		log.Printf("[xero Request] - SetAuthorizationHeader Error: %#v\n", headerErr)
-		return "", headerErr
+	if otherOptions != nil {
+		req.URL.RawQuery = otherOptions.Values.Encode()
 	}
 
+	req.URL.Path = path
+
+	headerErr := client.SetAuthorizationHeader(req.Header, &client.Credentials, method, req.URL, nil)
+	if headerErr != nil {
+		jww.ERROR.Printf("[xero Request] - SetAuthorizationHeader Error: %#v\n", headerErr)
+		return "", headerErr
+	}
+	// jww.DEBUG.Printf("other options: %v", otherOptions)
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	// req.Header.Set("Accept", "application/json")
+	// jww.DEBUG.Printf("[xero Request] - req: %v\n", req)
 	resp, reqErr := http.DefaultClient.Do(req)
 	if reqErr != nil {
-		log.Printf("[xero Request] - Error: %#v\n", reqErr)
+		jww.ERROR.Printf("[xero Request] - Error in Do: %#v %#v\n", req, reqErr)
 		return "", reqErr
 	}
 

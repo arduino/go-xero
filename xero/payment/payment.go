@@ -17,16 +17,11 @@
 
 package payment
 
-import (
-	"encoding/xml"
-	"errors"
-	"log"
-
-	"github.com/arduino/go-xero/xero"
-)
+import "encoding/xml"
 
 const (
-	path = "/api.xro/2.0/Payments"
+	// Path is the relative API path for Payments
+	Path = "/api.xro/2.0/Payments"
 )
 
 // InvoiceParam is the model with the Invoice Number
@@ -50,61 +45,16 @@ type Payment struct {
 	Reference string
 }
 
-type payments struct {
+// Payments is the Payments array model
+type Payments struct {
 	Payments []Payment
 }
 
-type response struct {
+// Response is the xero request response model for payments
+type Response struct {
 	ID           string `xml:"Id"`
 	Status       string `xml:",omitempty"`
 	ProviderName string
 	DateTimeUTC  string
 	Payments     []Payment `xml:"Payments>Payment"`
-}
-
-// New creates one or more payments for the given Invoices
-func New(paym []Payment) ([]string, error) {
-
-	var paymentsToSave payments
-
-	paymentsToSave.Payments = paym
-
-	var paymentSaved response
-	var errorResponse xero.ApiException
-
-	xmlString, marshalErr := xml.Marshal(paymentsToSave)
-	if marshalErr != nil {
-		log.Printf("error: %#v\n", marshalErr)
-		return nil, marshalErr
-	}
-
-	resp, err := xero.PostRequest(path, string(xmlString))
-	if err != nil {
-		log.Printf("[xero payment New] - error: %#v\n", err)
-		return nil, err
-	}
-
-	//log.Printf("\n\n[xero payment New] - Payment Saved XML: %s\n", string(resp))
-	savedMarshalErr := xml.Unmarshal([]byte(resp), &paymentSaved)
-	if savedMarshalErr != nil {
-		log.Printf("[xero payment New] - Xml Unmarshal Error: %#v\n", savedMarshalErr)
-		return nil, savedMarshalErr
-	}
-
-	if paymentSaved.Status != "OK" {
-		apiMarshalErr := xml.Unmarshal([]byte(resp), &errorResponse)
-		if apiMarshalErr != nil {
-			return nil, apiMarshalErr
-		}
-		log.Printf("[xero payment New] - Xero Api Error in Response: %#v\n", errorResponse)
-		return nil, errors.New(errorResponse.Message)
-	}
-
-	var payments []string
-	for _, payment := range paymentSaved.Payments {
-		payments = append(payments, payment.PaymentID)
-	}
-
-	return payments, nil
-
 }
